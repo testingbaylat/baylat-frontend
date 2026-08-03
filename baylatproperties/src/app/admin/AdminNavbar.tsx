@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sun, Moon, LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/context/ThemeContext';
-import { signOut } from '@/api/api'; // Imports your custom Axios setup
+import { signOut } from '@/app/services/api/api'; // Imports your custom Axios setup
 import AppLogo from '@/components/ui/AppLogo';
 
 interface AdminNavbarProps {

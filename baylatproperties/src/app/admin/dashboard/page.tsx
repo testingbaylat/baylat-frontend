@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Home, Video, X } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import API, { createListing, getAllListings, getAllListingsAdmin, getAllVideos, updateListing, uploadMediaFile, uploadVideo, deleteListing, signOut, getMe} from '@/api/api';
+import API, { createListing, getAllListings, getAllListingsAdmin, getAllVideos, updateListing, uploadMediaFile, uploadVideo, deleteListing, signOut, getMe} from '@/app/services/api/api';
 import { useEffect } from 'react';
 import router from 'next/router';
 import AdminNavbar from '../AdminNavbar';

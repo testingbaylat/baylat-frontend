@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { formatNaira, formatDate } from '@/lib/mockData';
 import PropertyCard from '@/components/shared/PropertyCard';
-import API from '@/api/api';
+import API from '@/app/services/api/api';
 import { Property } from '@/types';
 import { useEffect } from 'react';
 
