@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail } from 'lucide-react'; // Swapped User for Mail icon
 import { toast } from 'sonner';
-import { signin } from '@/app/services/api/api'; // Imports your custom Axios setup
+import { signin } from '@/utils/api/api'; // Imports your custom Axios setup
 import Navbar from '@/components/layout/Navbar';
 
 

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import PropertyCard from '@/components/shared/PropertyCard';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import API from '@/app/services/api/api'; 
+import API from '@/utils/api/api'; 
 
 type FilterType = 'all' | 'sale' | 'rent';
 

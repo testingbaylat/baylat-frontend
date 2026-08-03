@@ -7,7 +7,7 @@ import { FilterState } from '@/types';
 import PropertyFilters from '@/components/properties/PropertyFilters';
 import PropertyCard from '@/components/shared/PropertyCard';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import {getAllListings } from '@/app/services/api/api'; // Imports your custom Axios setup
+import {getAllListings } from '@/utils/api/api'; // Imports your custom Axios setup
 
 const PAGE_SIZE = 9;
 
