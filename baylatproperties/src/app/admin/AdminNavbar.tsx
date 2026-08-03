@@ -29,7 +29,7 @@ export default function AdminNavbar({ adminUser }: AdminNavbarProps) {
       await signOut(); 
       toast.success("Session closed successfully.");
        window.location.href = '/admin/login'; 
-      // router.push('/admin/login'); // Kick back down to login gateway screen
+      router.push('/admin/login'); // Kick back down to login gateway screen
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error("Failed to safely invalidate session.");

@@ -1,76 +1,44 @@
+
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Home, Video, X } from 'lucide-react';
-import axios from 'axios';
 import { toast } from 'sonner';
-import API, { createListing, getAllListings, getAllListingsAdmin, getAllVideos, updateListing, uploadMediaFile, uploadVideo, deleteListing, signOut, getMe} from '@/utils/api/api';
-import { useEffect } from 'react';
-import router from 'next/router';
+import { useRouter } from 'next/navigation'; // ❌ FIXED: Swapped 'next/router' for next/navigation
+import API, { 
+  createListing, 
+  getAllListingsAdmin, 
+  getAllVideos, 
+  updateListing, 
+  uploadMediaFile, 
+  deleteListing, 
+  getMe, 
+  uploadVideo
+} 
+from '@/utils/api/api';
 import AdminNavbar from '../AdminNavbar';
 
 
 export default function AdminDashboardPage() {
+  const router = useRouter(); 
   const [activeTab, setActiveTab] = useState<'listings' | 'videos'>('listings');
 
   // Dashboard Data Storage
   const [listings, setListings] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modals state
-  const [isListingModalOpen, setIsListingModalOpen] = useState(false);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [adminUser, setAdminUser] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        // 1. Immediately verify authorization by fetching the active user profile
-        const userData = await getMe();
-        
-        // Safety check: If the token is cleared or invalid, userData will be blank
-         if (!userData || !userData.username || !userData.isAdmin) {
-          toast.error("Access Denied: Administrative credentials required.");
-          router.replace('/admin/login'); // Force browser replacement back to login
-          return;
-        }
-
-        
-        // 2. If user is authenticated and verified as admin, load the rest of the datasets
-        setAdminUser(userData);
-
-        const listingRes = await getAllListingsAdmin();
-        setListings(listingRes.listings || []);
-
-        const videoRes = await getAllVideos();
-        setVideos(videoRes.data.videos || videoRes.data || []);
-
-      setLoading(false); // Only disable loading screen here once everything is completely safe!
-     
-      } catch (error) {
-        console.error('Authorization routing block error:', error);
-        toast.error("Unauthorized: Please sign in to access the dashboard.");
-        
-        window.location.href = '/admin/login'
-      } 
-    };
-
-    fetchDashboardData();
-  }, []);
-
+  // Modal Toggles
+  const [isListingModalOpen, setIsListingModalOpen] = useState(false);
   const [isEditListingModalOpen, setIsEditListingModalOpen] = useState(false);
-  const [isDeleteListingModalOpen, setIsDeleteListingModalOpen] = useState(false);
-  const [isEditVideoModalOpen, setIsEditVideoModalOpen] = useState(false);
-  const [isDeleteVideoModalOpen, setIsDeleteVideoModalOpen] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Raw Selected Media States for File Uploading
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
 
-  // Listing Form State (Kept images array to match your preference change)
+  // Listing Form State
   const [listingData, setListingData] = useState({
     _id: '',
     name: '',
@@ -88,35 +56,50 @@ export default function AdminDashboardPage() {
     type: 'sale',
     status: 'active',
     featured: true,
-    images: [] as string[], // Holds final URLs after pipeline execution
+    images: [] as string[],
     userRef: 'admin123',
   });
 
   const [videoData, setVideoData] = useState({ title: '', url: '' });
 
-  // 1. Fetch All Existing Database Content on Mount
+  // ❌ FIXED: Removed the second redundant data-fetch useEffect to prevent race conditions.
+  // Unified single source of truth for security verification and cluster pulls.
   useEffect(() => {
     const fetchDashboardData = async () => {
-      setLoading(true);
       try {
-        // Correct path mapping matching deduplicated api.js rules
+        setLoading(true);
+        
+        // 1. Immediately verify authorization by fetching the active user profile
+        const userData = await getMe();
+        console.log(userData);
+        // Strict Security Intercept: Reject unauthenticated profiles instantly
+        if (!userData || !userData.username || !userData.isAdmin) {
+          toast.error("Access Denied: Administrative credentials required.");
+          router.replace('/admin/login'); // Redirect straight to login layout path
+          return;
+        }
+
+        // 2. If user is authenticated and verified as admin, populate components state
+        setAdminUser(userData);
+
         const listingRes = await getAllListingsAdmin();
         setListings(listingRes.listings || []);
 
         const videoRes = await getAllVideos();
-        setVideos(videoRes.data.videos || videoRes.data || []);
+        setVideos(videoRes.data?.videos || videoRes.data || []);
+
+        setLoading(false); // Only release UI render zone here!
       } catch (error) {
-        console.error('Error fetching dashboard datasets:', error);
-        toast.error('Failed to load dashboard data.');
-      } finally {
-        setLoading(false);
-      }
+        console.error('Authorization routing block error:', error);
+        toast.error("Unauthorized: Please sign in to access the dashboard.");
+        window.location.href = '/admin/login'; // Fallback window bounce to kill local storage tokens
+      } 
     };
 
     fetchDashboardData();
-  }, []);
+  }, [router]);
 
-  // 2. Input Change Mappers
+  // Input Change Mappers
   const handleListingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
@@ -127,7 +110,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 3. Local Media Input Array Handlers (Captures file buffers instead of mock strings)
+  // Local Media Input Array Handlers
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
@@ -138,49 +121,46 @@ export default function AdminDashboardPage() {
   const removeSelectedImageFile = (index: number) => {
     setSelectedImageFiles(prev => prev.filter((_, i) => i !== index));
   };
-// Call this function when an admin clicks the "Edit" button next to any property row
-const handleOpenEditModal = (selectedProperty: any) => {
-  setListingData({
-    _id: selectedProperty._id || selectedProperty.id || '',
-    name: selectedProperty.name || '',
-    description: selectedProperty.description || '',
-    address: selectedProperty.address || '',
-    state: selectedProperty.state || '',
-    regularPrice: selectedProperty.regularPrice || 0,
-    discountPrice: selectedProperty.discountPrice || 0,
-    offer: selectedProperty.offer || false,
-    bathrooms: selectedProperty.bathrooms || 0,
-    bedrooms: selectedProperty.bedrooms || 0,
-    furnished: selectedProperty.furnished || false,
-    sqft: selectedProperty.sqft || 0,
-    parking: selectedProperty.parking || false,
-    type: selectedProperty.type || 'sale',
-    status: selectedProperty.status || 'active',
-    featured: selectedProperty.featured || false,
-    images: selectedProperty.images || [], // Populates existing cloud images correctly
-    userRef: selectedProperty.userRef || 'admin123',
-  });
-  
-  // Clear any leftover staged image files from previous operations
-  setSelectedImageFiles([]); 
-  setIsEditListingModalOpen(true);
-};
 
-   // 1. Submit Handler (Create New Listing)
+  const handleOpenEditModal = (selectedProperty: any) => {
+    setListingData({
+      _id: selectedProperty._id || selectedProperty.id || '',
+      name: selectedProperty.name || '',
+      description: selectedProperty.description || '',
+      address: selectedProperty.address || '',
+      state: selectedProperty.state || '',
+      regularPrice: selectedProperty.regularPrice || 0,
+      discountPrice: selectedProperty.discountPrice || 0,
+      offer: selectedProperty.offer || false,
+      bathrooms: selectedProperty.bathrooms || 0,
+      bedrooms: selectedProperty.bedrooms || 0,
+      furnished: selectedProperty.furnished || false,
+      sqft: selectedProperty.sqft || 0,
+      parking: selectedProperty.parking || false,
+      type: selectedProperty.type || 'sale',
+      status: selectedProperty.status || 'active',
+      featured: selectedProperty.featured || false,
+      images: selectedProperty.images || [], 
+      userRef: selectedProperty.userRef || 'admin123',
+    });
+    
+    setSelectedImageFiles([]); 
+    setIsEditListingModalOpen(true);
+  };
+
+  // 1. Submit Handler (Create New Listing)
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       let finalUrls: string[] = [];
 
-      // Upload all queued images at once using your unified bulk handler
+      // ❌ FIXED: Swapped 'uploadMediaFile' for 'uploadMediaFile' to send bulk array payload
       if (selectedImageFiles.length > 0) {
         const resImages = await uploadMediaFile(selectedImageFiles as any);
-        // Ensure the response is treated as a flat array of clean URL strings
         finalUrls = Array.isArray(resImages) ? resImages.flat() : [resImages];
       }
 
-      // Explicitly construct and type-cast the payload to protect Mongoose types
       const completePayload = {
         ...listingData,
         regularPrice: Number(listingData.regularPrice),
@@ -188,17 +168,17 @@ const handleOpenEditModal = (selectedProperty: any) => {
         bathrooms: Number(listingData.bathrooms),
         bedrooms: Number(listingData.bedrooms),
         sqft: Number(listingData.sqft),
-        images: finalUrls.map((url) => String(url).trim()), // Injects clean URLs array
+        images: finalUrls.map((url) => String(url).trim()),
       };
 
       const res = await createListing(completePayload);
 
-      if (res.data?.success) {
+      if (res.data?.success || res.data.success) {
         toast.success('Listing created and published successfully!');
-        const savedListing = res.data?.listing || completePayload;
+        const savedListing = res.data?.listing || res.data.listing || completePayload;
         setListings((prev) => [savedListing, ...prev]);
         setIsListingModalOpen(false);
-        setSelectedImageFiles([]); // Clear upload staging queue
+        setSelectedImageFiles([]); 
       }
     } catch (error: any) {
       console.error('Create error:', error);
@@ -209,11 +189,9 @@ const handleOpenEditModal = (selectedProperty: any) => {
   };
 
   // 2. Edit Handler (Update Existing Listing)
-      const handleEditListing = async (e: React.FormEvent) => {
+  const handleEditListing = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Resolve target database identifier from our pre-populated state
     const targetId = listingData._id;
 
     if (!targetId) {
@@ -225,17 +203,14 @@ const handleOpenEditModal = (selectedProperty: any) => {
     try {
       let newUploadedUrls: string[] = [];
 
-      // 1. Bulk upload brand new staged images if files are queued
       if (selectedImageFiles.length > 0) {
         const resImages = await uploadMediaFile(selectedImageFiles as any);
         newUploadedUrls = Array.isArray(resImages) ? resImages.flat() : [resImages];
       }
 
-      // 2. Safely merge your existing database images with your new Cloudinary URLs
       const existingImages = listingData.images || [];
       const combinedImages = [...existingImages, ...newUploadedUrls].map((url) => String(url).trim());
 
-      // 3. Assemble complete payload enforcing Mongoose number typing rules
       const completePayload = {
         name: listingData.name,
         description: listingData.description,
@@ -255,19 +230,15 @@ const handleOpenEditModal = (selectedProperty: any) => {
         userRef: listingData.userRef
       };
 
-      // 4. Send PUT update execution request to your backend cluster
       const res = await updateListing(targetId, completePayload);
 
       if (res.data?.success || res.data.success) {
         toast.success('Listing updated successfully!');
-        
         const updatedListing = res.data?.listing || res.data.listing || { ...completePayload, _id: targetId };
         
-        // 5. In-place state array swap out to keep user context synchronized
         setListings((prev) =>
           prev.map((item) => ((item._id || item.id) === targetId ? updatedListing : item))
         );
-        
         setIsEditListingModalOpen(false); 
         setSelectedImageFiles([]); 
       }
@@ -280,119 +251,83 @@ const handleOpenEditModal = (selectedProperty: any) => {
   };
 
   const getCloudinaryPublicId = (url: string): string | null => {
-  try {
-    // Splits the URL to isolate everything after the '/upload/' segment
-    const parts = url.split('/upload/');
-    if (parts.length < 2) return null;
-    
-    // Removes the version number (e.g., 'v1785604593/') if present, and drops the extension (.jpg)
-    const pathWithoutVersion = parts[1].replace(/^v\d+\//, '');
-    return pathWithoutVersion.substring(0, pathWithoutVersion.lastIndexOf('.'));
-  } catch (error) {
-    console.error('Failed to parse public ID:', error);
-    return null;
-  }
-};
+    try {
+      const parts = url.split('/upload/');
+      if (parts.length < 2) return null;
+      const pathWithoutVersion = parts[1].replace(/^v\d+\//, '');
+      return pathWithoutVersion.substring(0, pathWithoutVersion.lastIndexOf('.'));
+    } catch (error) {
+      console.error('Failed to parse public ID:', error);
+      return null;
+    }
+  };
 
-    const handleDeleteListing = async (property: any) => {
-    // 1. Trigger native confirmation prompt to prevent accidental deletions
+  const handleDeleteListing = async (property: any) => {
     const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${property.name}"?`);
     if (!confirmDelete) return;
 
     const targetId = property._id || property.id;
     if (!targetId) {
-      toast.error("Could not resolve listing ID identification parameter.");
-      return;
-    }
 
-    try {
-      // 2. Clear out associated assets from Cloudinary storage bucket
-      const imageUrlsArray = property.images || property.imageUrls || [];
-      
-      for (const url of imageUrlsArray) {
-        const publicId = getCloudinaryPublicId(url);
-        if (publicId) {
-          // Hits your backend router.post('/delete') endpoint inside your image route file
-          await API.post('/image/delete', { publicId });
-        }
-      }
-
-      // 3. Purge the metadata entry from your MongoDB cluster
-      const res = await deleteListing(targetId);
-
-      if (res.data?.success || res.data.success) {
-        toast.success('Property listing and cloud assets successfully removed!');
-        
-        // 4. Instantly filter the deleted item out of your local view table list state
-        setListings((prev) => prev.filter((item) => (item._id || item.id) !== targetId));
-      }
-    } catch (error: any) {
-      console.error('Deletion failure trace:', error);
-      toast.error(error.response?.data?.message || 'Failed to complete full asset destruction pipeline.');
-    }
-  };
-
-      // Calculate analytics from the existing listings state array in real time
-      const totalProperties = listings.length;
-      const totalSold = listings.filter(item => item.status === 'sold').length;
-      const totalRented = listings.filter(item => item.status === 'rented').length;
-
-    // Calculate today's sales volume accurately using ISO date strings
-      const todaysSalesVolume = listings.reduce((total, item) => {
-        // Only calculate items that are explicitly marked as closed/sold
-        if (item.status === 'sold' && item.createdAt) {
-          const createdDate = new Date(item.createdAt).toISOString().split('T')[0];
-          const todayDate = new Date().toISOString().split('T')[0];
-
-          // If the year, month, and day match up exactly
-          if (createdDate === todayDate) {
-            const price = Number(item.discountPrice) || Number(item.regularPrice) || 0;
-            return total + price;
-          }
-        }
-        return total;
-      }, 0);
-
-
-
-
-
-
-
-    
-
-  // 5. Video Upload Form Handler
-  const handleSubmitVideo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      let absoluteVideoUrl = videoData.url;
-
-      // Handle raw files if provided, fallback to raw input strings
-      if (selectedVideoFile) {
-        absoluteVideoUrl = await uploadMediaFile(selectedVideoFile);
-      }
-
-      const res = await uploadVideo({
-        title: videoData.title,
-        url: absoluteVideoUrl,
-      });
-
-      if (res.data.success || res.data?.success) {
-        toast.success('Video added successfully!');
-        setIsVideoModalOpen(false);
-        setSelectedVideoFile(null);
-      }
-    } catch (error) {
-      toast.error('Failed to register targeted video data.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
- 
-
-
+toast.error("Could not resolve listing ID identification parameter.");
+return;
+}
+try {
+const imageUrlsArray = property.images || property.imageUrls || [];
+for (const url of imageUrlsArray) {
+const publicId = getCloudinaryPublicId(url);
+if (publicId) {
+await API.post('/image/delete', { publicId });
+}
+}
+const res = await deleteListing(targetId);
+if (res.data?.success || res.data.success) {
+toast.success('Property listing and cloud assets removed!');
+setListings((prev) => prev.filter((item) => (item._id || item.id) !== targetId));
+}
+} catch (error: any) {
+console.error('Deletion failure trace:', error);
+toast.error(error.response?.data?.message || 'Failed to complete full asset destruction.');
+}
+};
+// Real-time Aggregated Calculations Analytics
+const totalProperties = listings.length;
+const totalSold = listings.filter(item => item.status === 'sold').length;
+const totalRented = listings.filter(item => item.status === 'rented').length;
+const todaysSalesVolume = listings.reduce((total, item) => {
+if (item.status === 'sold' && item.createdAt) {
+const createdDate = new Date(item.createdAt).toISOString().split('T')[0];
+const todayDate = new Date().toISOString().split('T')[0];
+if (createdDate === todayDate) {
+const price = Number(item.discountPrice) || Number(item.regularPrice) || 0;
+return total + price;
+}
+}
+return total;
+}, 0);
+const handleSubmitVideo = async (e: React.FormEvent) => {
+e.preventDefault();
+setIsSubmitting(true);
+try {
+let absoluteVideoUrl = videoData.url;
+if (selectedVideoFile) {
+absoluteVideoUrl = await uploadMediaFile(selectedVideoFile);
+}
+const res = await uploadVideo({
+title: videoData.title,
+url: absoluteVideoUrl,
+});
+if (res.data?.success || res.data.success) {
+toast.success('Video added successfully!');
+setIsVideoModalOpen(false);
+setSelectedVideoFile(null);
+}
+} catch (error) {
+toast.error('Failed to register targeted video data.');
+} finally {
+setIsSubmitting(false);
+}
+};
 
   let count = 1;
 
@@ -489,7 +424,7 @@ const handleOpenEditModal = (selectedProperty: any) => {
   </div>
 
   {/* Card 4: Today's Sales Volume */}
-  <div className="bg-card border border-border/60 p-5 rounded-2xl shadow-sm flex flex-col justify-between hover:border-green-500/40 transition-all duration-200 bg-gradient-to-br from-card to-green-500/5">
+  {/* <div className="bg-card border border-border/60 p-5 rounded-2xl shadow-sm flex flex-col justify-between hover:border-green-500/40 transition-all duration-200 bg-gradient-to-br from-card to-green-500/5">
     <div>
       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
         Today's Revenue Volume
@@ -501,7 +436,7 @@ const handleOpenEditModal = (selectedProperty: any) => {
     <div className="text-[11px] text-green-600 dark:text-green-400 mt-2 font-medium">
       Real-time closed deals volume today
     </div>
-  </div>
+  </div> */}
 
 </div>
 

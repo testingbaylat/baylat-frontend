@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   title: 'Baylat Properties — Smart Investments. Lasting Value.',
   description: 'Baylat Properties offers premium real estate listings for sale and rent across Lagos, Abuja, and Port Harcourt — your trusted Nigerian property partner.',
   icons: {
-    icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
+    icon: [{ url: '/favicon.png', type: 'image/png' }],
   },
   openGraph: {
     title: 'Baylat Properties — Smart Investments. Lasting Value.',
