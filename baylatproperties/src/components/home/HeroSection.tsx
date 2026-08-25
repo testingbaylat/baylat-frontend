@@ -37,7 +37,7 @@ export default function HeroSection() {
         style={{ y: bgY }}>
         
         <img
-          src="https://img.rocket.new/generatedImages/rocket_gen_img_1305c6141-1781426129655.png"
+          src="/assets/images/baylat_landingpage.webp"
           alt="Luxury Nigerian home exterior — modern architecture with lush garden in Lagos"
           className="w-full h-full object-cover scale-110" />
         

@@ -50,7 +50,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-lg text-foreground mb-1">Phone Number</h3>
-                <p className="text-muted-foreground">+234 812 237 9119<br />+234 703 754 4327</p>
+                <p className="text-muted-foreground">+234 5678<br />+234 56789</p>
               </div>
             </div>
 

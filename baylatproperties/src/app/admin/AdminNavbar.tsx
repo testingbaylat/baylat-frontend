@@ -26,9 +26,9 @@ export default function AdminNavbar({ adminUser }: AdminNavbarProps) {
 
     try {
       // Hits your backend auth signout route to clear your cookie cache parameters
-      await signOut(); 
+      await signOut();
       toast.success("Session closed successfully.");
-       window.location.href = '/admin/login'; 
+      window.location.href = '/admin/login';
       router.push('/admin/login'); // Kick back down to login gateway screen
     } catch (error) {
       console.error('Sign out error:', error);
@@ -39,25 +39,25 @@ export default function AdminNavbar({ adminUser }: AdminNavbarProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border/60 shadow-sm backdrop-blur-md h-16 flex items-center">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        
+
         {/* Brand Identity Branding Link */}
         <div className="flex items-center gap-2 flex-shrink-0 select-none">
           <AppLogo size={30} />
-          <span className="font-poppins font-bold text-base tracking-tight text-foreground">
+          <span href="/" className="font-poppins font-bold text-base tracking-tight text-foreground">
             Baylat<span className="text-primary">Admin</span>
           </span>
         </div>
 
         {/* Right Active Actions Suite Container */}
         <div className="flex items-center gap-4">
-          
+
           {/* Real-time Dynamic Identity Tag Card */}
           {adminUser && (
             <div className="flex items-center gap-2 bg-secondary/20 px-3 py-1.5 rounded-xl border border-border/40 max-w-[180px] sm:max-w-xs">
               {adminUser.avatar ? (
-                <img 
-                  src={adminUser.avatar} 
-                  alt="avatar" 
+                <img
+                  src={adminUser.avatar}
+                  alt="avatar"
                   className="w-6 h-6 rounded-full object-cover flex-shrink-0 border border-primary/40"
                   onError={(e) => { (e.target as HTMLImageElement).src = 'https://pixabay.com'; }}
                 />
