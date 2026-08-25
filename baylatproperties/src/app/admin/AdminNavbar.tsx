@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { signOut } from '@/utils/api/api'; // Imports your custom Axios setup
 import AppLogo from '@/components/ui/AppLogo';
+import Link from 'next/link';
 
 interface AdminNavbarProps {
   adminUser: {
@@ -43,9 +44,11 @@ export default function AdminNavbar({ adminUser }: AdminNavbarProps) {
         {/* Brand Identity Branding Link */}
         <div className="flex items-center gap-2 flex-shrink-0 select-none">
           <AppLogo size={30} />
-          <span href="/" className="font-poppins font-bold text-base tracking-tight text-foreground">
-            Baylat<span className="text-primary">Admin</span>
-          </span>
+          <Link href="/">
+            <span className="font-poppins font-bold text-base tracking-tight text-foreground">
+              Baylat<span className="text-primary">Admin</span>
+            </span>
+          </Link>
         </div>
 
         {/* Right Active Actions Suite Container */}

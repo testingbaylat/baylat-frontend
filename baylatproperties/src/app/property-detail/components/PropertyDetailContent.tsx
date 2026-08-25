@@ -541,14 +541,14 @@ export default function PropertyDetailContent() {
                 {/* Contact Buttons */}
                 <div className="space-y-3">
                   <a
-                    href="tel:+2348000000000"
+                    href="tel:+234 916 974 9620"
                     className="flex items-center justify-center gap-2 w-full bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary-dark transition-colors shadow-green"
                   >
                     <Phone size={18} />
                     Call Agent
                   </a>
                   <a
-                    href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello, I am interested in: ${property.name} at ${property.address}, ${property.state}`)}`}
+                    href={`https://wa.me/2349169749620?text=${encodeURIComponent(`Hello, I am interested in: ${property.name} at ${property.address}, ${property.state}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full border border-green-500 text-green-600 dark:text-green-400 py-3 rounded-xl font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
