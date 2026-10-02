@@ -15,6 +15,28 @@ import API, {
   from '@/utils/api/api';
 import AdminNavbar from '../AdminNavbar';
 
+const createEmptyListingForm = () => ({
+  _id: '',
+  name: '',
+  description: '',
+  address: '',
+  state: '',
+  regularPrice: '',
+  discountPrice: '',
+  offer: false,
+  bathrooms: '',
+  bedrooms: '',
+  furnished: false,
+  sqft: '',
+  parking: false,
+  type: 'sale',
+  status: 'active',
+  featured: true,
+  images: [] as string[],
+  youtubeUrl: '',
+  userRef: 'admin123',
+});
+
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -32,27 +54,7 @@ export default function AdminDashboardPage() {
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
 
   // Listing Form State
-  const [listingData, setListingData] = useState({
-    _id: '',
-    name: '',
-    description: '',
-    address: '',
-    state: '',
-    regularPrice: 0,
-    discountPrice: 0,
-    offer: false,
-    bathrooms: 0,
-    bedrooms: 0,
-    furnished: false,
-    sqft: 0,
-    parking: false,
-    type: 'sale',
-    status: 'active',
-    featured: true,
-    images: [] as string[],
-    youtubeUrl: '',
-    userRef: 'admin123',
-  });
+  const [listingData, setListingData] = useState(createEmptyListingForm);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -91,9 +93,13 @@ export default function AdminDashboardPage() {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setListingData(prev => ({ ...prev, [name]: checked }));
+      setListingData(prev => ({
+        ...prev,
+        [name]: checked,
+        ...(name === 'offer' && !checked ? { discountPrice: '' } : {}),
+      }));
     } else {
-      setListingData(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
+      setListingData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -110,19 +116,25 @@ export default function AdminDashboardPage() {
   };
 
   const handleOpenEditModal = (selectedProperty: any) => {
+    const regularPrice = Number(selectedProperty.regularPrice);
+    const discountPrice = Number(selectedProperty.discountPrice);
+    const hasValidOffer = Boolean(
+      selectedProperty.offer && discountPrice > 0 && discountPrice < regularPrice
+    );
+
     setListingData({
       _id: selectedProperty._id || selectedProperty.id || '',
       name: selectedProperty.name || '',
       description: selectedProperty.description || '',
       address: selectedProperty.address || '',
       state: selectedProperty.state || '',
-      regularPrice: selectedProperty.regularPrice || 0,
-      discountPrice: selectedProperty.discountPrice || 0,
-      offer: selectedProperty.offer || false,
-      bathrooms: selectedProperty.bathrooms || 0,
-      bedrooms: selectedProperty.bedrooms || 0,
+      regularPrice: regularPrice > 0 ? String(regularPrice) : '',
+      discountPrice: hasValidOffer ? String(discountPrice) : '',
+      offer: hasValidOffer,
+      bathrooms: Number(selectedProperty.bathrooms) > 0 ? String(selectedProperty.bathrooms) : '',
+      bedrooms: Number(selectedProperty.bedrooms) > 0 ? String(selectedProperty.bedrooms) : '',
       furnished: selectedProperty.furnished || false,
-      sqft: selectedProperty.sqft || 0,
+      sqft: Number(selectedProperty.sqft) > 0 ? String(selectedProperty.sqft) : '',
       parking: selectedProperty.parking || false,
       type: selectedProperty.type || 'sale',
       status: selectedProperty.status || 'active',
@@ -139,6 +151,13 @@ export default function AdminDashboardPage() {
   // 1. Submit Handler (Create New Listing)
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (listingData.offer && (
+      Number(listingData.discountPrice) <= 0 ||
+      Number(listingData.discountPrice) >= Number(listingData.regularPrice)
+    )) {
+      toast.error('Discount price must be greater than zero and below the regular price.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       let finalUrls: string[] = [];
@@ -151,7 +170,7 @@ export default function AdminDashboardPage() {
       const completePayload = {
         ...listingData,
         regularPrice: Number(listingData.regularPrice),
-        discountPrice: Number(listingData.discountPrice) || 0,
+        discountPrice: listingData.offer ? Number(listingData.discountPrice) : null,
         bathrooms: Number(listingData.bathrooms),
         bedrooms: Number(listingData.bedrooms),
         sqft: Number(listingData.sqft),
@@ -166,6 +185,7 @@ export default function AdminDashboardPage() {
         setListings((prev) => [savedListing, ...prev]);
         setIsListingModalOpen(false);
         setSelectedImageFiles([]);
+        setListingData(createEmptyListingForm());
       }
     } catch (error: any) {
       console.error('Create error:', error);
@@ -178,6 +198,13 @@ export default function AdminDashboardPage() {
   // 2. Edit Handler (Update Existing Listing)
   const handleEditListing = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (listingData.offer && (
+      Number(listingData.discountPrice) <= 0 ||
+      Number(listingData.discountPrice) >= Number(listingData.regularPrice)
+    )) {
+      toast.error('Discount price must be greater than zero and below the regular price.');
+      return;
+    }
     setIsSubmitting(true);
     const targetId = listingData._id;
 
@@ -204,7 +231,7 @@ export default function AdminDashboardPage() {
         address: listingData.address,
         state: listingData.state,
         regularPrice: Number(listingData.regularPrice),
-        discountPrice: Number(listingData.discountPrice) || 0,
+        discountPrice: listingData.offer ? Number(listingData.discountPrice) : null,
         bathrooms: Number(listingData.bathrooms),
         bedrooms: Number(listingData.bedrooms),
         furnished: Boolean(listingData.furnished),
@@ -396,7 +423,11 @@ export default function AdminDashboardPage() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-foreground">Manage Listings</h2>
               <button
-                onClick={() => setIsListingModalOpen(true)}
+                onClick={() => {
+                  setListingData(createEmptyListingForm());
+                  setSelectedImageFiles([]);
+                  setIsListingModalOpen(true);
+                }}
                 className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors text-sm shadow-green">
                 <Plus size={16} />
                 Add Listing
@@ -515,12 +546,13 @@ export default function AdminDashboardPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Regular Price *</label>
-                  <input required name="regularPrice" value={listingData.regularPrice} onChange={handleListingChange} type="number" min="0" className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" />
+                  <input required name="regularPrice" value={listingData.regularPrice} onChange={handleListingChange} type="number" min="1" step="1" className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Discount Price</label>
-                  <input required name="discountPrice" value={listingData.discountPrice} onChange={handleListingChange} type="number" min="0" className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" />
+                  <label className="text-sm font-medium text-foreground">Discount Price {listingData.offer ? '*' : '(optional)'}</label>
+                  <input required={listingData.offer} disabled={!listingData.offer} name="discountPrice" value={listingData.discountPrice} onChange={handleListingChange} type="number" min="1" step="1" className="w-full px-3 py-2 border rounded-lg bg-background text-foreground disabled:cursor-not-allowed disabled:opacity-50" />
+                  <p className="text-xs text-muted-foreground">Select Special Offer to enter a discounted price.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -694,12 +726,12 @@ export default function AdminDashboardPage() {
 
                 <div className="space-y-1">
                   <label className="font-medium text-muted-foreground">Regular Price *</label>
-                  <input required name="regularPrice" value={listingData.regularPrice} onChange={handleListingChange} type="number" min="0" className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm" />
+                  <input required name="regularPrice" value={listingData.regularPrice} onChange={handleListingChange} type="number" min="1" step="1" className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm" />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-muted-foreground">Discount Price</label>
-                  <input required name="discountPrice" value={listingData.discountPrice} onChange={handleListingChange} type="number" min="0" className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm" />
+                  <label className="font-medium text-muted-foreground">Discount Price {listingData.offer ? '*' : '(optional)'}</label>
+                  <input required={listingData.offer} disabled={!listingData.offer} name="discountPrice" value={listingData.discountPrice} onChange={handleListingChange} type="number" min="1" step="1" className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-50" />
                 </div>
 
                 <div className="space-y-1">

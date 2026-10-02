@@ -13,6 +13,10 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property, index = 0 }: PropertyCardProps) {
+  const hasValidOffer = Boolean(
+    property.offer && Number(property.discountPrice) > 0 && property.discountPrice! < property.regularPrice
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -40,7 +44,7 @@ export default function PropertyCard({ property, index = 0 }: PropertyCardProps)
               >
                 For {property.type === 'sale' ? 'Sale' : 'Rent'}
               </span>
-              {property.offer && (
+              {hasValidOffer && (
                 <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white flex items-center gap-1">
                   <Tag size={10} />
                   Offer
@@ -54,14 +58,14 @@ export default function PropertyCard({ property, index = 0 }: PropertyCardProps)
             {/* Price */}
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl font-poppins font-bold text-primary text-naira">
-                {property.offer && property.discountPrice
+                {hasValidOffer
                   ? formatNaira(property.discountPrice)
                   : formatNaira(property.regularPrice)}
                 {property.type === 'rent' && (
                   <span className="text-sm font-normal text-muted-foreground">/mo</span>
                 )}
               </span>
-              {property.offer && property.discountPrice && (
+              {hasValidOffer && (
                 <span className="text-sm text-muted-foreground line-through text-naira">
                   {formatNaira(property.regularPrice)}
                 </span>
@@ -87,14 +91,18 @@ export default function PropertyCard({ property, index = 0 }: PropertyCardProps)
                   <span>{property.bedrooms} Bed{property.bedrooms !== 1 ? 's' : ''}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                <Bath size={15} className="text-primary" />
-                <span>{property.bathrooms} Bath{property.bathrooms !== 1 ? 's' : ''}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground text-sm ml-auto">
-                <Maximize2 size={14} className="text-primary" />
-                <span>{property.sqft} sqft</span>
-              </div>
+              {property.bathrooms > 0 && (
+                <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                  <Bath size={15} className="text-primary" />
+                  <span>{property.bathrooms} Bath{property.bathrooms !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {property.sqft > 0 && (
+                <div className="flex items-center gap-1.5 text-muted-foreground text-sm ml-auto">
+                  <Maximize2 size={14} className="text-primary" />
+                  <span>{property.sqft} sqft</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

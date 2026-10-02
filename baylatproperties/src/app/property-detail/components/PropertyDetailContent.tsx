@@ -29,6 +29,13 @@ const inquirySchema = z.object({
 
 type InquiryFormData = z.infer<typeof inquirySchema>;
 
+const hasValidOfferPrice = (property: Pick<Property, 'offer' | 'discountPrice' | 'regularPrice'>) =>
+  Boolean(
+    property.offer &&
+    Number(property.discountPrice) > 0 &&
+    Number(property.discountPrice) < Number(property.regularPrice)
+  );
+
 const getYouTubeVideoId = (videoUrl?: string) => {
   if (!videoUrl) return null;
 
@@ -88,7 +95,7 @@ export default function PropertyDetailContent() {
         setValue(
           'message',
           `Hello, I am interested in the property "${currentProperty.name}" listed at ${formatNaira(
-            currentProperty.offer && currentProperty.discountPrice
+            hasValidOfferPrice(currentProperty)
               ? currentProperty.discountPrice
               : currentProperty.regularPrice
           )}. Please get in touch with me at your earliest convenience.`
@@ -125,7 +132,7 @@ export default function PropertyDetailContent() {
         propertyName: property?.name,
         propertyAddress: property ? `${property.address}, ${property.state}` : '',
         propertyPrice: property
-          ? formatNaira(property.offer && property.discountPrice ? property.discountPrice : property.regularPrice)
+          ? formatNaira(hasValidOfferPrice(property) ? Number(property.discountPrice) : property.regularPrice)
           : '',
         ...data,
       });
@@ -173,12 +180,13 @@ export default function PropertyDetailContent() {
   }
 
   // 6. Dynamic Financial Variables calculated from live schema fields
-  const displayPrice = property.offer && property.discountPrice
-    ? property.discountPrice
+  const hasOffer = hasValidOfferPrice(property);
+  const displayPrice = hasOffer
+    ? Number(property.discountPrice)
     : property.regularPrice;
 
-  const savings = property.offer && property.discountPrice
-    ? property.regularPrice - property.discountPrice
+  const savings = hasOffer
+    ? property.regularPrice - Number(property.discountPrice)
     : 0;
   const youtubeVideoId = getYouTubeVideoId(property.youtubeUrl);
 
@@ -338,7 +346,7 @@ export default function PropertyDetailContent() {
                   >
                     For {property.type === 'sale' ? 'Sale' : 'Rent'}
                   </span>
-                  {property.offer && (
+                  {hasOffer && (
                     <span className="px-3 py-1.5 rounded-xl text-sm font-semibold bg-red-500 text-white flex items-center gap-1">
                       <Tag size={12} />
                       Special Offer
@@ -439,16 +447,16 @@ export default function PropertyDetailContent() {
                     <div className="text-muted-foreground text-xs mt-1">Bedrooms</div>
                   </div>
                 )}
-                <div className="text-center p-4 bg-secondary/50 rounded-xl">
+                {property.bathrooms > 0 && <div className="text-center p-4 bg-secondary/50 rounded-xl">
                   <Bath size={24} className="text-primary mx-auto mb-2" />
                   <div className="font-poppins font-bold text-foreground text-xl">{property.bathrooms}</div>
                   <div className="text-muted-foreground text-xs mt-1">Bathrooms</div>
-                </div>
-                <div className="text-center p-4 bg-secondary/50 rounded-xl">
+                </div>}
+                {property.sqft > 0 && <div className="text-center p-4 bg-secondary/50 rounded-xl">
                   <Maximize2 size={24} className="text-primary mx-auto mb-2" />
                   <div className="font-poppins font-bold text-foreground text-xl">{property.sqft.toLocaleString()}</div>
                   <div className="text-muted-foreground text-xs mt-1">Square Feet</div>
-                </div>
+                </div>}
                 <div className="text-center p-4 bg-secondary/50 rounded-xl">
                   <Calendar size={24} className="text-primary mx-auto mb-2" />
                   <div className="font-poppins font-bold text-foreground text-sm">{formatDate(property.createdAt)}</div>
@@ -470,7 +478,7 @@ export default function PropertyDetailContent() {
                     Parking Available
                   </div>
                 )}
-                {property.offer && (
+                {hasOffer && (
                   <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium">
                     <Tag size={16} />
                     Special Offer
@@ -535,7 +543,7 @@ export default function PropertyDetailContent() {
                       <span className="text-muted-foreground text-sm">/month</span>
                     )}
                   </div>
-                  {property.offer && property.discountPrice && (
+                  {hasOffer && (
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-muted-foreground text-sm line-through text-naira">
                         {formatNaira(property.regularPrice)}
@@ -559,14 +567,14 @@ export default function PropertyDetailContent() {
                       <span className="font-semibold text-card-foreground">{property.bedrooms}</span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-sm">
+                  {property.bathrooms > 0 && <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Bathrooms</span>
                     <span className="font-semibold text-card-foreground">{property.bathrooms}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
+                  </div>}
+                  {property.sqft > 0 && <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Area</span>
                     <span className="font-semibold text-card-foreground">{property.sqft.toLocaleString()} sqft</span>
-                  </div>
+                  </div>}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Furnished</span>
                     <span className={`font-semibold ${property.furnished ? 'text-primary' : 'text-card-foreground'}`}>

@@ -5,7 +5,7 @@ export interface Property {
   address: string;
   state: string;
   regularPrice: number; 
-  discountPrice?: number;
+  discountPrice?: number | null;
   offer: boolean;
   bedrooms: number;
   bathrooms: number;
