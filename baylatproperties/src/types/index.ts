@@ -14,6 +14,7 @@ export interface Property {
   parking: boolean;
   type: 'sale' | 'rent';
   images: string[];
+  youtubeUrl?: string;
   createdAt: string;
   featured?: boolean;
 }

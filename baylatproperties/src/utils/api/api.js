@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// 1. Create a reusable Axios instance
 const API = axios.create({
   baseURL: 'https://baylat-backend.onrender.com/api' || 'http://localhost:5000/api',
   withCredentials: true,

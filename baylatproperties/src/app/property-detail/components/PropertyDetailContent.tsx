@@ -29,6 +29,24 @@ const inquirySchema = z.object({
 
 type InquiryFormData = z.infer<typeof inquirySchema>;
 
+const getYouTubeVideoId = (videoUrl?: string) => {
+  if (!videoUrl) return null;
+
+  try {
+    const url = new URL(videoUrl);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    if (!['youtube.com', 'm.youtube.com', 'youtu.be'].includes(host)) return null;
+
+    const videoId = host === 'youtu.be'
+      ? url.pathname.split('/').filter(Boolean)[0]
+      : url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?]+)/)?.[1];
+
+    return videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function PropertyDetailContent() {
   const searchParams = useSearchParams();
   const propertyId = searchParams.get('id'); // Get dynamic mongo ID from query params
@@ -104,6 +122,11 @@ export default function PropertyDetailContent() {
       // Direct integration to your Nodemailer endpoint
       await API.post('/mail/send-inquiry', {
         listingId: propertyId,
+        propertyName: property?.name,
+        propertyAddress: property ? `${property.address}, ${property.state}` : '',
+        propertyPrice: property
+          ? formatNaira(property.offer && property.discountPrice ? property.discountPrice : property.regularPrice)
+          : '',
         ...data,
       });
       toast.success('Inquiry sent! Our team will contact you within 24 hours.');
@@ -157,6 +180,32 @@ export default function PropertyDetailContent() {
   const savings = property.offer && property.discountPrice
     ? property.regularPrice - property.discountPrice
     : 0;
+  const youtubeVideoId = getYouTubeVideoId(property.youtubeUrl);
+
+  const relatedPropertiesSection = relatedProperties.length > 0 ? (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-poppins font-bold text-foreground text-xl">
+          More in {property.state}
+        </h2>
+        <Link
+          href="/properties-listing"
+          className="flex items-center gap-1 text-primary text-sm font-semibold hover:gap-2 transition-all"
+        >
+          View all <ArrowRight size={16} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {relatedProperties.map((p, i) => (
+          <PropertyCard key={p._id} property={p} index={i} />
+        ))}
+      </div>
+    </motion.div>
+  ) : null;
 
 
 
@@ -351,6 +400,25 @@ export default function PropertyDetailContent() {
               )}
             </motion.div>
 
+            {youtubeVideoId && (
+              <section className="bg-card rounded-2xl border border-border shadow-card p-5 md:p-6">
+                <h2 className="font-poppins font-bold text-card-foreground text-xl mb-4">
+                  Property Video
+                </h2>
+                <div className="aspect-video overflow-hidden rounded-xl bg-black">
+                  <iframe
+                    src={`https://www.youtube-nocookie.com/embed/${youtubeVideoId}`}
+                    title={`${property.name} property video`}
+                    className="h-full w-full"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
+              </section>
+            )}
+
             {/* Property Details Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -442,31 +510,10 @@ export default function PropertyDetailContent() {
               </div>
             </motion.div>
 
-            {/* Related Properties */}
-            {relatedProperties.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-poppins font-bold text-foreground text-xl">
-                    More in {property.state}
-                  </h2>
-                  <Link
-                    href="/properties-listing"
-                    className="flex items-center gap-1 text-primary text-sm font-semibold hover:gap-2 transition-all"
-                  >
-                    View all <ArrowRight size={16} />
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {relatedProperties.map((p, i) => (
-                    <PropertyCard key={p._id} property={p} index={i} />
-                  ))}
-                </div>
-              </motion.div>
-            )}
+            {/* Keep the wide-screen placement in the property details column. */}
+            <div className="hidden xl:block">
+              {relatedPropertiesSection}
+            </div>
           </div>
 
           {/* Right Column — Price + Inquiry Form */}
@@ -702,6 +749,11 @@ export default function PropertyDetailContent() {
                 </ul>
               </motion.div>
             </div>
+          </div>
+
+          {/* On mobile, show related listings after the contact and agent cards. */}
+          <div className="xl:hidden">
+            {relatedPropertiesSection}
           </div>
         </div>
       </div>

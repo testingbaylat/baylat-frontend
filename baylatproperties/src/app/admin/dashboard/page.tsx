@@ -3,16 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Home, Video, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation'; // ❌ FIXED: Swapped 'next/router' for next/navigation
+import { useRouter } from 'next/navigation';
 import API, {
   createListing,
   getAllListingsAdmin,
-  getAllVideos,
   updateListing,
   uploadMediaFile,
   deleteListing,
-  getMe,
-  uploadVideo
+  getMe
 }
   from '@/utils/api/api';
 import AdminNavbar from '../AdminNavbar';
@@ -20,11 +18,8 @@ import AdminNavbar from '../AdminNavbar';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'listings' | 'videos'>('listings');
-
   // Dashboard Data Storage
   const [listings, setListings] = useState<any[]>([]);
-  const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
@@ -32,11 +27,9 @@ export default function AdminDashboardPage() {
   // Modal Toggles
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
   const [isEditListingModalOpen, setIsEditListingModalOpen] = useState(false);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Raw Selected Media States for File Uploading
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
-  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
 
   // Listing Form State
   const [listingData, setListingData] = useState({
@@ -57,13 +50,10 @@ export default function AdminDashboardPage() {
     status: 'active',
     featured: true,
     images: [] as string[],
+    youtubeUrl: '',
     userRef: 'admin123',
   });
 
-  const [videoData, setVideoData] = useState({ title: '', url: '' });
-
-  // ❌ FIXED: Removed the second redundant data-fetch useEffect to prevent race conditions.
-  // Unified single source of truth for security verification and cluster pulls.
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -84,9 +74,6 @@ export default function AdminDashboardPage() {
 
         const listingRes = await getAllListingsAdmin();
         setListings(listingRes.listings || []);
-
-        const videoRes = await getAllVideos();
-        setVideos(videoRes.data?.videos || videoRes.data || []);
 
         setLoading(false); // Only release UI render zone here!
       } catch (error) {
@@ -141,6 +128,7 @@ export default function AdminDashboardPage() {
       status: selectedProperty.status || 'active',
       featured: selectedProperty.featured || false,
       images: selectedProperty.images || [],
+      youtubeUrl: selectedProperty.youtubeUrl || '',
       userRef: selectedProperty.userRef || 'admin123',
     });
 
@@ -155,7 +143,6 @@ export default function AdminDashboardPage() {
     try {
       let finalUrls: string[] = [];
 
-      // ❌ FIXED: Swapped 'uploadMediaFile' for 'uploadMediaFile' to send bulk array payload
       if (selectedImageFiles.length > 0) {
         const resImages = await uploadMediaFile(selectedImageFiles as any);
         finalUrls = Array.isArray(resImages) ? resImages.flat() : [resImages];
@@ -227,6 +214,7 @@ export default function AdminDashboardPage() {
         status: listingData.status,
         featured: Boolean(listingData.featured),
         images: combinedImages,
+        youtubeUrl: listingData.youtubeUrl.trim(),
         userRef: listingData.userRef
       };
 
@@ -305,30 +293,6 @@ export default function AdminDashboardPage() {
     }
     return total;
   }, 0);
-  const handleSubmitVideo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      let absoluteVideoUrl = videoData.url;
-      if (selectedVideoFile) {
-        absoluteVideoUrl = await uploadMediaFile(selectedVideoFile);
-      }
-      const res = await uploadVideo({
-        title: videoData.title,
-        url: absoluteVideoUrl,
-      });
-      if (res.data?.success || res.data.success) {
-        toast.success('Video added successfully!');
-        setIsVideoModalOpen(false);
-        setSelectedVideoFile(null);
-      }
-    } catch (error) {
-      toast.error('Failed to register targeted video data.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   let count = 1;
 
   if (loading) {
@@ -357,22 +321,9 @@ export default function AdminDashboardPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <h1 className="text-3xl font-poppins font-bold text-foreground">Admin Dashboard</h1>
 
-          <div className="flex bg-card p-1 rounded-lg border border-border shadow-sm">
-
-            <button
-              onClick={() => setActiveTab('listings')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'listings' ? 'bg-primary text-white' : 'text-foreground hover:bg-secondary'}`}
-            >
-              <Home size={18} />
-              Listings
-            </button>
-            <button
-              onClick={() => setActiveTab('videos')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'videos' ? 'bg-primary text-white' : 'text-foreground hover:bg-secondary'}`}
-            >
-              <Video size={18} />
-              Videos
-            </button>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Home size={18} />
+            <span>Property listings</span>
           </div>
         </div>
         {/* Admin Analytics Panel */}
@@ -441,8 +392,7 @@ export default function AdminDashboardPage() {
         </div>
 
 
-        {activeTab === 'listings' && (
-          <div className="space-y-6">
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-foreground">Manage Listings</h2>
               <button
@@ -475,7 +425,20 @@ export default function AdminDashboardPage() {
                         <td className="p-4">
                           <img src={item.images[0]} alt={item.name} className="w-12 h-12 rounded object-cover border border-border" />
                         </td>
-                        <td className="p-4 text-sm font-medium text-foreground">{item.name}</td>
+                        <td className="p-4 text-sm font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            <span>{item.name}</span>
+                            {item.youtubeUrl && (
+                              <span
+                                className="inline-flex text-emerald-600 dark:text-emerald-400"
+                                title="A YouTube video is attached to this property"
+                                aria-label="YouTube video added"
+                              >
+                                <Video size={16} aria-hidden="true" />
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-4 text-sm text-muted-foreground">{item.address}</td>
                         <td className="p-4 text-sm text-foreground capitalize">{item.type}</td>
                         <td className="p-4 text-sm text-muted-foreground">₦{item.regularPrice.toLocaleString()}</td>
@@ -500,52 +463,7 @@ export default function AdminDashboardPage() {
                 </table>
               </div>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'videos' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-foreground">Manage Videos</h2>
-              <button
-                onClick={() => setIsVideoModalOpen(true)}
-                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors text-sm shadow-green">
-                <Plus size={16} />
-                Add Video
-              </button>
-            </div>
-
-            <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
-                  <thead className="bg-secondary/50 border-b border-border">
-                    <tr>
-                      <th className="p-4 text-sm font-semibold text-muted-foreground">ID</th>
-                      <th className="p-4 text-sm font-semibold text-muted-foreground">Title</th>
-                      <th className="p-4 text-sm font-semibold text-muted-foreground">URL</th>
-                      <th className="p-4 text-sm font-semibold text-muted-foreground text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {videos.map(item => (
-                      <tr key={item.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-4 text-sm text-foreground">#{item.id}</td>
-                        <td className="p-4 text-sm font-medium text-foreground">{item.title}</td>
-                        <td className="p-4 text-sm text-blue-500 hover:underline"><a href={item.url} target="_blank" rel="noreferrer">{item.url}</a></td>
-                        <td className="p-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"><Edit2 size={16} /></button>
-                            <button className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"><Trash2 size={16} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Listing Modal */}
@@ -587,6 +505,12 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-foreground">State *</label>
                   <input required name="state" value={listingData.state} onChange={handleListingChange} type="text" className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-foreground">YouTube Video URL <span className="text-muted-foreground">(optional)</span></label>
+                  <input name="youtubeUrl" value={listingData.youtubeUrl} onChange={handleListingChange} type="url" placeholder="https://www.youtube.com/watch?v=..." className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" />
+                  <p className="text-xs text-muted-foreground">Add a YouTube video for this property. Leave blank if there is no video.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -763,6 +687,11 @@ export default function AdminDashboardPage() {
                   <input required name="state" value={listingData.state} onChange={handleListingChange} type="text" className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm" />
                 </div>
 
+                <div className="space-y-1 col-span-2 md:col-span-3">
+                  <label className="font-medium text-muted-foreground">YouTube Video URL <span className="font-normal">(optional)</span></label>
+                  <input name="youtubeUrl" value={listingData.youtubeUrl} onChange={handleListingChange} type="url" placeholder="https://www.youtube.com/watch?v=..." className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm" />
+                </div>
+
                 <div className="space-y-1">
                   <label className="font-medium text-muted-foreground">Regular Price *</label>
                   <input required name="regularPrice" value={listingData.regularPrice} onChange={handleListingChange} type="number" min="0" className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-foreground text-sm" />
@@ -879,40 +808,6 @@ export default function AdminDashboardPage() {
         </div>
 
 
-      )}
-
-      {/* Video Modal */}
-      {isVideoModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl">
-            <div className="flex justify-between items-center p-6 border-b border-border">
-              <h3 className="text-lg font-bold text-foreground">Add New Video</h3>
-              <button onClick={() => setIsVideoModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitVideo} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Video Title</label>
-                <input required type="text" value={videoData.title} onChange={e => setVideoData(prev => ({ ...prev, title: e.target.value }))} className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" placeholder="e.g. Lagos Land Tour" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">YouTube / Video URL</label>
-                <input required type="url" value={videoData.url} onChange={e => setVideoData(prev => ({ ...prev, url: e.target.value }))} className="w-full px-3 py-2 border rounded-lg bg-background text-foreground" placeholder="https://..." />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 mt-6">
-                <button type="button" onClick={() => setIsVideoModalOpen(false)} className="px-4 py-2 rounded-lg font-medium text-foreground hover:bg-secondary transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-lg font-medium bg-primary text-white hover:bg-primary-dark transition-colors disabled:opacity-70">
-                  {isSubmitting ? 'Saving...' : 'Save Video'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
     </main>
