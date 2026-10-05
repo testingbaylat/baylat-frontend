@@ -63,7 +63,7 @@ export default function ContactPageContent() {
               </div>
               <div className="flex items-start gap-4">
                 <div className="bg-primary/10 p-3 rounded-full text-primary"><Clock size={24} /></div>
-                <div><h3 className="font-semibold text-lg text-foreground mb-1">Hours of Operation</h3><p className="text-muted-foreground">Mon - Fri: 8:00 AM - 6:00 PM<br />Saturday: 10:00 AM - 4:00 PM</p></div>
+                <div><h3 className="font-semibold text-lg text-foreground mb-1">Hours of Operation</h3><p className="text-muted-foreground">Mon - Fri: 8:00 AM - 6:00 PM</p></div>
               </div>
             </div>
 
