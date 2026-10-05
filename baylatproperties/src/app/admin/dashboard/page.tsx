@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Home, Video, X } from 'lucide-react';
@@ -36,6 +35,12 @@ const createEmptyListingForm = () => ({
   youtubeUrl: '',
   userRef: 'admin123',
 });
+
+const resolveListingId = (value: any) => {
+  if (!value) return '';
+  const id = value._id ?? value.id ?? value.listingId ?? '';
+  return id ? String(id) : '';
+};
 
 
 export default function AdminDashboardPage() {
@@ -116,6 +121,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleOpenEditModal = (selectedProperty: any) => {
+    const propertyId = resolveListingId(selectedProperty);
     const regularPrice = Number(selectedProperty.regularPrice);
     const discountPrice = Number(selectedProperty.discountPrice);
     const hasValidOffer = Boolean(
@@ -123,14 +129,14 @@ export default function AdminDashboardPage() {
     );
 
     setListingData({
-      _id: selectedProperty._id || selectedProperty.id || '',
+      _id: propertyId,
       name: selectedProperty.name || '',
       description: selectedProperty.description || '',
       address: selectedProperty.address || '',
       state: selectedProperty.state || '',
       regularPrice: regularPrice > 0 ? String(regularPrice) : '',
       discountPrice: hasValidOffer ? String(discountPrice) : '',
-      offer: hasValidOffer,
+      offer: Boolean(selectedProperty.offer),
       bathrooms: Number(selectedProperty.bathrooms) > 0 ? String(selectedProperty.bathrooms) : '',
       bedrooms: Number(selectedProperty.bedrooms) > 0 ? String(selectedProperty.bedrooms) : '',
       furnished: selectedProperty.furnished || false,
@@ -171,6 +177,7 @@ export default function AdminDashboardPage() {
         ...listingData,
         regularPrice: Number(listingData.regularPrice),
         discountPrice: listingData.offer ? Number(listingData.discountPrice) : null,
+        offer: Boolean(listingData.offer),
         bathrooms: Number(listingData.bathrooms),
         bedrooms: Number(listingData.bedrooms),
         sqft: Number(listingData.sqft),
@@ -206,7 +213,7 @@ export default function AdminDashboardPage() {
       return;
     }
     setIsSubmitting(true);
-    const targetId = listingData._id;
+    const targetId = resolveListingId(listingData);
 
     if (!targetId) {
       toast.error("Could not resolve valid Listing ID parameter identifier.");
@@ -232,6 +239,7 @@ export default function AdminDashboardPage() {
         state: listingData.state,
         regularPrice: Number(listingData.regularPrice),
         discountPrice: listingData.offer ? Number(listingData.discountPrice) : null,
+        offer: Boolean(listingData.offer),
         bathrooms: Number(listingData.bathrooms),
         bedrooms: Number(listingData.bedrooms),
         furnished: Boolean(listingData.furnished),
@@ -281,7 +289,7 @@ export default function AdminDashboardPage() {
     const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${property.name}"?`);
     if (!confirmDelete) return;
 
-    const targetId = property._id || property.id;
+    const targetId = resolveListingId(property);
     if (!targetId) {
 
       toast.error("Could not resolve listing ID identification parameter.");
